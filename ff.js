@@ -2,123 +2,228 @@ let tasks = [];
 let taskId = 1;
 
 let taskInput = document.getElementById('taskInput');
-let addTask = document.getElementById('addTask');
+let addTaskButton = document.getElementById('addTask');
 let taskList = document.getElementById('taskList');
-let deleteTask = document.getElementById('deleteС');
-let prevPage = document.getElementById('pageStr');
-let nextPage = document.getElementById('nextPage');
-let currentFilter = 'all';
+let deleteCompletedButton = document.getElementById('deleteCompleted');
+let toggleAllCheckbox = document.getElementById('toggleAll');
+
 let tabAll = document.getElementById('tabAll');
 let tabActive = document.getElementById('tabActive');
 let tabCompleted = document.getElementById('tabCompleted');
-let page = 0;
+
+let countAll = document.getElementById('countAll');
+let countActive = document.getElementById('countActive');
+let countCompleted = document.getElementById('countCompleted');
+
+let previousPageButton = document.getElementById('previousPage');
+let nextPageButton = document.getElementById('nextPage');
+
+let currentFilter = 'all';
+let currentPage = 0;
 let pageSize = 5;
 
 
-addTask.addEventListener('click', function () {
-    let text = taskInput.value;
-    if (text === '') return;
 
-    tasks.unshift({
+// ДОБАВЛЕНИЕ ЗАДАЧИ
+function addTask() {
+    let text = taskInput.value;
+
+    if (text === '') {
+        return;
+    }
+
+    let task = {
         id: taskId++,
         text: text,
         completed: false
-    });
+    };
+
+    tasks.unshift(task);
 
     taskInput.value = '';
-    page = 0;
+    currentPage = 0;
+
     renderTasks();
-});
 
+    taskInput.focus();
+}
 
-function renderTasks() {
-    taskList.innerHTML = '';
+addTaskButton.addEventListener('click', addTask);
 
-    let start = page * pageSize;
-    let end = start + pageSize;
+taskInput.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        addTask();
+    }
 
-    for (let i = start; i < end && i < tasks.length; i++) {
-        let task = tasks[i];
-
-        let li = document.createElement('li');
-
-        // чекбокс
-        let checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = task.completed;
-        checkbox.addEventListener('change', function () {
-            task.completed = checkbox.checked;
-        });
-
-        // текст
-        let span = document.createElement('span');
-span.innerHTML = task.text;
-span.style.marginLeft = '8px';
-span.contentEditable = true;
-
-// переменная для хранения старого текста
-let oldText = task.text;
-
-// при фокусе сохраняем текущее значение
-span.addEventListener('focus', function () {
-    oldText = task.text;
-});
-
-// при потере фокуса сохраняем новое значение
-span.addEventListener('blur', function () {
-    task.text = span.innerHTML;
-});
-
-// отмена редактирования по Esc
-span.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-        span.innerHTML = oldText; // возвращаем старое значение
-        span.blur();               // убираем фокус
+    if (event.key === 'Escape') {
+        taskInput.value = '';
     }
 });
-        // кнопка удаления
-        let deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Удалить';
-        // дизайн
-        deleteButton.style.backgroundColor = '#333';
-        deleteButton.style.color = 'white';
-        deleteButton.style.border = 'none';
-        deleteButton.style.borderRadius = '4px';
-        deleteButton.style.padding = '3px 8px';
-        deleteButton.style.marginLeft = '8px';
-        deleteButton.style.cursor = 'pointer';
 
-        deleteButton.addEventListener('click', function () {
-            tasks = tasks.filter(t => t.id !== task.id);
+
+
+// РЕНДЕР
+function renderTasks() {
+
+    taskList.innerHTML = '';
+
+    let filteredTasks = tasks.filter(function(task) {
+        if (currentFilter === 'active') {
+            return task.completed === false;
+        }
+        if (currentFilter === 'completed') {
+            return task.completed === true;
+        }
+        return true;
+    });
+
+    countAll.innerHTML = tasks.length;
+    countActive.innerHTML = tasks.filter(t => t.completed === false).length;
+    countCompleted.innerHTML = tasks.filter(t => t.completed === true).length;
+
+    let totalPages = Math.ceil(filteredTasks.length / pageSize);
+    if (currentPage >= totalPages && totalPages > 0) {
+        currentPage = totalPages - 1;
+    }
+
+    let start = currentPage * pageSize;
+    let end = start + pageSize;
+
+    for (let i = start; i < end && i < filteredTasks.length; i++) {
+
+        let task = filteredTasks[i];
+
+        let li = document.createElement('li');
+        li.className = 'task-item';
+        if (task.completed === true) {
+            li.className += ' completed';
+        }
+
+        li.innerHTML = `
+            <input type="checkbox" ${task.completed ? 'checked' : ''}>
+            <span class="task-text">${task.text}</span>
+            <button class="delete-button">Удалить</button>
+        `;
+
+        let checkbox = li.querySelector('input');
+        let span = li.querySelector('span');
+        let deleteButton = li.querySelector('button');
+
+        checkbox.addEventListener('change', function() {
+            task.completed = checkbox.checked;
             renderTasks();
         });
 
-        li.appendChild(checkbox);
-        li.appendChild(span);
-        li.appendChild(deleteButton);
+        let oldText = task.text;
+
+        span.addEventListener('click', function() {
+            span.contentEditable = true;
+            span.focus();
+        });
+
+        span.addEventListener('focus', function() {
+            oldText = task.text;
+        });
+
+        span.addEventListener('blur', function() {
+            task.text = span.innerHTML;
+            span.contentEditable = false;
+        });
+
+        span.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                span.innerHTML = oldText;
+                span.contentEditable = false;
+                span.blur();
+            }
+        });
+
+        deleteButton.addEventListener('click', function() {
+            tasks = tasks.filter(function(t) {
+                return t.id !== task.id;
+            });
+            renderTasks();
+        });
 
         taskList.appendChild(li);
     }
 }
 
-deleteTask.addEventListener('click', function () {
-    tasks = tasks.filter(function(task){
+
+
+// УДАЛЕНИЕ ВЫПОЛНЕННЫХ
+deleteCompletedButton.addEventListener('click', function() {
+    tasks = tasks.filter(function(task) {
         return task.completed === false;
     });
-    taskList.innerHTML = '';
+    currentPage = 0;
     renderTasks();
 });
 
-prevPage.addEventListener('click', function () {
-    if (page > 0) {
-        page--;
+
+
+// ВЫБРАТЬ ВСЕ
+toggleAllCheckbox.addEventListener('change', function() {
+    tasks.forEach(function(task) {
+        task.completed = toggleAllCheckbox.checked;
+    });
+    renderTasks();
+});
+
+
+
+// ВКЛАДКИ
+tabAll.addEventListener('click', function() {
+    currentFilter = 'all';
+    currentPage = 0;
+    setActiveTab(tabAll);
+    renderTasks();
+});
+
+tabActive.addEventListener('click', function() {
+    currentFilter = 'active';
+    currentPage = 0;
+    setActiveTab(tabActive);
+    renderTasks();
+});
+
+tabCompleted.addEventListener('click', function() {
+    currentFilter = 'completed';
+    currentPage = 0;
+    setActiveTab(tabCompleted);
+    renderTasks();
+});
+
+function setActiveTab(activeTab) {
+    tabAll.classList.remove('active');
+    tabActive.classList.remove('active');
+    tabCompleted.classList.remove('active');
+    activeTab.classList.add('active');
+}
+
+
+
+// ПАГИНАЦИЯ
+previousPageButton.addEventListener('click', function() {
+    if (currentPage > 0) {
+        currentPage--;
         renderTasks();
     }
 });
 
-nextPage.addEventListener('click', function () {
-    if ((page + 1) * pageSize < tasks.length) {
-        page++;
+nextPageButton.addEventListener('click', function() {
+    let filteredTasks = tasks.filter(function(task) {
+        if (currentFilter === 'active') return task.completed === false;
+        if (currentFilter === 'completed') return task.completed === true;
+        return true;
+    });
+
+    if ((currentPage + 1) * pageSize < filteredTasks.length) {
+        currentPage++;
         renderTasks();
     }
 });
+
+
+renderTasks();
+taskInput.focus();

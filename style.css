@@ -140,3 +140,39 @@ header {
     height: 18px;
     margin-right: 10px;
 }
+.controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.tab {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    background-color: #333;
+    color: white;
+    cursor: pointer;
+}
+
+.tab.active {
+    background-color: #24272b;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.small-button {
+    width: auto;
+    padding: 8px 12px;
+}
